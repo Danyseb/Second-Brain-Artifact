@@ -1,0 +1,600 @@
+<title>Segundo Cerebro de Dany</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+/* Layout: vault-style app — tab bar, then Cerebro = sidebar | note | graph; other tabs are single working panes */
+:root{
+  --bg:#f3f3f6; --panel:#ffffff; --panel2:#eceef3; --line:#d9dce5; --fg:#1c1e26; --muted:#646a7c;
+  --accent:#6b5cff; --accent-fg:#ffffff; --warn:#b4541a; --ok:#1f8a5b;
+  --f-display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --f-body:"IBM Plex Sans", system-ui, -apple-system, sans-serif;
+  --f-mono:"IBM Plex Mono", ui-monospace, Menlo, monospace;
+  --r:8px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#17181d; --panel:#1f2027; --panel2:#272832; --line:#343642; --fg:#e7e8ee; --muted:#9a9db0;
+  --accent:#9b8cff; --accent-fg:#14131c; --warn:#f0a36b; --ok:#5fd39b; color-scheme:dark }}
+:root[data-theme="dark"]{
+  --bg:#17181d; --panel:#1f2027; --panel2:#272832; --line:#343642; --fg:#e7e8ee; --muted:#9a9db0;
+  --accent:#9b8cff; --accent-fg:#14131c; --warn:#f0a36b; --ok:#5fd39b; color-scheme:dark }
+html,body{height:100%}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:14px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:12px;box-sizing:border-box;display:flex;flex-direction:column;gap:12px}
+*{box-sizing:border-box}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+header.top{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.brand{font-family:var(--f-display);font-weight:700;font-size:20px;letter-spacing:-.01em;display:flex;align-items:center;gap:8px}
+.brand .dot{width:10px;height:10px;border-radius:50%;background:conic-gradient(#ff6b6b,#ffb347,#4fd1a5,#5aa9ff,#b28dff,#ff6b6b)}
+nav.tabs{display:flex;gap:4px;flex-wrap:wrap;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:3px}
+nav.tabs button{border:0;background:none;padding:6px 14px;border-radius:999px;color:var(--muted);font-weight:500}
+nav.tabs button[aria-selected="true"]{background:var(--accent);color:var(--accent-fg)}
+.status{margin-left:auto;font-family:var(--f-mono);font-size:12px;color:var(--muted)}
+main{flex:1;min-height:0}
+section.view{height:100%;min-height:0}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--r)}
+.label{font-family:var(--f-mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.btn{border:1px solid var(--line);background:var(--panel2);padding:6px 12px;border-radius:6px}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-fg);font-weight:600}
+.btn.ghost{background:none}
+.btn.danger{color:var(--warn)}
+.btn:disabled{opacity:.5;cursor:default}
+input.field,select.field,textarea.field{width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:7px 10px}
+/* Cerebro */
+#v-brain{display:grid;grid-template-columns:240px minmax(0,1fr) minmax(0,1.15fr);gap:12px}
+.side{display:flex;flex-direction:column;min-height:0;overflow:hidden}
+.side .search{padding:10px;border-bottom:1px solid var(--line);display:flex;gap:6px}
+.areas{padding:8px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:2px;max-height:45%;overflow:auto}
+.area-row{display:flex;align-items:center;gap:8px;border:0;background:none;padding:4px 8px;border-radius:6px;text-align:left;width:100%}
+.area-row:hover,.area-row[aria-pressed="true"]{background:var(--panel2)}
+.area-row .sw{width:9px;height:9px;border-radius:50%;flex:none}
+.area-row .n{margin-left:auto;font-family:var(--f-mono);font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
+.notes{flex:1;overflow:auto;padding:6px}
+.note-row{display:block;width:100%;text-align:left;border:0;background:none;padding:6px 8px;border-radius:6px;color:var(--fg)}
+.note-row:hover{background:var(--panel2)}
+.note-row[aria-current="true"]{background:var(--panel2);box-shadow:inset 3px 0 0 var(--c,var(--accent))}
+.note-row small{display:block;color:var(--muted);font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.editor{display:flex;flex-direction:column;min-height:0;overflow:auto;padding:18px 20px;gap:12px}
+.editor h1{margin:0}
+.editor .title{font-family:var(--f-display);font-weight:700;font-size:26px;border:0;background:none;padding:0;width:100%;letter-spacing:-.01em}
+.meta{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.meta select,.meta input{width:auto}
+.chip{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:2px 10px;font-size:12px;background:var(--panel2);border:1px solid var(--line)}
+.chip.area{color:var(--fg)}
+.chip .sw{width:8px;height:8px;border-radius:50%}
+.editor textarea.body{min-height:220px;flex:1;resize:vertical;line-height:1.6}
+.links{display:flex;flex-wrap:wrap;gap:6px}
+.links button{border:1px solid var(--line);background:none;border-radius:999px;padding:2px 10px;font-size:12px;color:var(--accent)}
+.empty{color:var(--muted);display:grid;place-items:center;text-align:center;padding:30px;gap:10px}
+.graph-wrap{position:relative;min-height:0;overflow:hidden}
+#graph{width:100%;height:100%;display:block;touch-action:none}
+.graph-tools{position:absolute;top:10px;left:10px;right:10px;display:flex;justify-content:space-between;gap:8px;pointer-events:none}
+.graph-tools>*{pointer-events:auto}
+.legend{position:absolute;left:10px;bottom:10px;display:flex;flex-wrap:wrap;gap:4px;max-width:calc(100% - 20px)}
+.legend span{font-size:11px;display:inline-flex;gap:5px;align-items:center;background:color-mix(in srgb,var(--panel) 85%,transparent);padding:1px 7px;border-radius:999px}
+.legend i{width:7px;height:7px;border-radius:50%;display:inline-block}
+/* Chat */
+.chat{display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:12px;height:100%}
+.chat-main{display:flex;flex-direction:column;min-height:0}
+.chat-head{padding:14px 18px;border-bottom:1px solid var(--line);display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.chat-head h2{font-family:var(--f-display);font-size:19px;margin:0}
+.chat-head p{margin:0;color:var(--muted);font-size:13px;flex-basis:100%}
+.msgs{flex:1;overflow:auto;padding:18px;display:flex;flex-direction:column;gap:12px}
+.msg{max-width:72ch;padding:10px 14px;border-radius:12px;white-space:pre-wrap;overflow-wrap:anywhere}
+.msg.user{align-self:flex-end;background:var(--accent);color:var(--accent-fg);border-bottom-right-radius:4px}
+.msg.assistant{align-self:flex-start;background:var(--panel2);border-bottom-left-radius:4px}
+.msg.sys{align-self:center;font-family:var(--f-mono);font-size:11.5px;color:var(--muted);background:none;padding:2px}
+.composer{display:flex;gap:8px;padding:12px;border-top:1px solid var(--line)}
+.composer textarea{flex:1;resize:none;height:64px}
+.chat-side{padding:14px;overflow:auto;display:flex;flex-direction:column;gap:10px}
+.chat-side ul{margin:0;padding-left:18px}
+/* Patrones */
+#v-patterns{overflow:auto}
+.pgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px}
+.card{padding:16px}
+.card h3{margin:0 0 10px;font-family:var(--f-display);font-size:16px}
+.bar{display:grid;grid-template-columns:120px 1fr 32px;gap:8px;align-items:center;font-size:12.5px}
+.bar .track{height:8px;background:var(--panel2);border-radius:4px;overflow:hidden}
+.bar .fill{height:100%;border-radius:4px}
+.bar .v{font-family:var(--f-mono);text-align:right;font-variant-numeric:tabular-nums}
+.pattern{border-top:1px solid var(--line);padding-top:10px;margin-top:10px}
+.pattern h4{margin:0 0 4px;font-size:14.5px}
+.pattern p{margin:4px 0;max-width:70ch}
+.wide{grid-column:1/-1}
+.note{font-size:12.5px;color:var(--muted);max-width:75ch}
+/* Ajustes */
+#v-settings{overflow:auto}
+#v-settings textarea{min-height:260px;font-family:var(--f-mono);font-size:12.5px}
+@media (max-width:1000px){
+  #v-brain{grid-template-columns:200px minmax(0,1fr)}
+  .graph-wrap{grid-column:1/-1;height:380px;order:-1}
+  .chat{grid-template-columns:1fr}
+  .chat-side{display:none}
+}
+@media (max-width:640px){
+  body{height:auto}
+  main{flex:none}
+  #v-brain{grid-template-columns:1fr}
+  .side{max-height:320px}
+  .graph-wrap{height:320px}
+  .chat{height:75vh}
+  .status{margin-left:0;flex-basis:100%}
+  .bar{grid-template-columns:90px 1fr 28px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<header class="top">
+  <div class="brand"><span class="dot"></span>Segundo Cerebro</div>
+  <nav class="tabs" role="tablist">
+    <button role="tab" data-v="brain" aria-selected="true">Cerebro</button>
+    <button role="tab" data-v="interviewer">Entrevistador</button>
+    <button role="tab" data-v="therapist">Terapeuta</button>
+    <button role="tab" data-v="patterns">Patrones</button>
+    <button role="tab" data-v="settings">Ajustes</button>
+  </nav>
+  <div class="status" id="status">Conectando…</div>
+</header>
+
+<main>
+  <section class="view" id="v-brain">
+    <aside class="panel side">
+      <div class="search"><input class="field" id="q" placeholder="Buscar notas…" aria-label="Buscar notas"><button class="btn primary" id="new" title="Nueva nota">+</button></div>
+      <div class="areas" id="areas"></div>
+      <div class="notes" id="list"></div>
+    </aside>
+    <article class="panel editor" id="editor"></article>
+    <div class="panel graph-wrap">
+      <canvas id="graph" aria-label="Grafo de notas"></canvas>
+      <div class="graph-tools"><span class="label" id="gcount"></span><button class="btn" id="recenter">Centrar</button></div>
+      <div class="legend" id="legend"></div>
+    </div>
+  </section>
+
+  <section class="view" id="v-interviewer" hidden></section>
+  <section class="view" id="v-therapist" hidden></section>
+
+  <section class="view" id="v-patterns" hidden>
+    <div class="pgrid">
+      <div class="panel card"><h3>Peso por área</h3><div id="p-areas"></div></div>
+      <div class="panel card"><h3>Actividad (8 semanas)</h3><canvas id="p-weeks" height="140" style="width:100%"></canvas></div>
+      <div class="panel card"><h3>Etiquetas recurrentes</h3><div id="p-tags" class="links"></div></div>
+      <div class="panel card wide">
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <h3 style="margin:0">Lectura del terapeuta</h3>
+          <button class="btn primary" id="analyze">Analizar patrones</button>
+          <span class="label" id="a-date"></span>
+        </div>
+        <p class="note">Hipótesis a partir de tus notas, no diagnósticos. Cada patrón cita las notas que lo sostienen para que puedas revisarlo tú.</p>
+        <div id="p-insight"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="view" id="v-settings" hidden>
+    <div class="pgrid">
+      <div class="panel card wide">
+        <h3>Meta-prompt del terapeuta</h3>
+        <p class="note">Pega aquí tu meta-prompt de psicólogo. Se usa en la pestaña Terapeuta y en Patrones. Las reglas de seguridad se añaden siempre al final.</p>
+        <textarea class="field" id="tprompt"></textarea>
+        <div style="display:flex;gap:8px;margin-top:8px"><button class="btn primary" id="tsave">Guardar</button><button class="btn ghost" id="treset">Restaurar base</button><span class="label" id="tmsg" style="align-self:center"></span></div>
+      </div>
+      <div class="panel card">
+        <h3>Exportar a Obsidian</h3>
+        <p class="note">Descarga un .zip con una carpeta por área y un .md por nota, con frontmatter y enlaces [[ ]]. Descomprímelo dentro de tu vault.</p>
+        <button class="btn primary" id="export">Descargar vault</button> <span class="label" id="emsg"></span>
+      </div>
+      <div class="panel card">
+        <h3>Áreas y colores</h3>
+        <div id="area-legend" class="links"></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+const AREAS = [
+  {id:"mente",name:"Mente y emociones",c:"#b28dff"},
+  {id:"salud",name:"Salud y cuerpo",c:"#4fd1a5"},
+  {id:"familia",name:"Familia y hogar",c:"#ffb347"},
+  {id:"relaciones",name:"Relaciones",c:"#ff7aa8"},
+  {id:"trabajo",name:"Trabajo",c:"#5aa9ff"},
+  {id:"estudio",name:"Estudio",c:"#38c7e0"},
+  {id:"musica",name:"Música y DJ",c:"#ff6b6b"},
+  {id:"finanzas",name:"Finanzas",c:"#c9d65a"},
+  {id:"proyectos",name:"Proyectos",c:"#7f8cff"},
+  {id:"habitos",name:"Hábitos y rutina",c:"#2fb37a"},
+  {id:"valores",name:"Valores y metas",c:"#e08cff"},
+  {id:"recuerdos",name:"Recuerdos e historia",c:"#d8a27a"}
+];
+const AMAP = Object.fromEntries(AREAS.map(a=>[a.id,a]));
+const area = id => AMAP[id] || AMAP.mente;
+
+const BASE_THERAPIST = `Actúas como el Dr. Rogers, el terapeuta del segundo cerebro de Daniel (Dany): un psicólogo clínico cálido con más de 10 años de experiencia en ansiedad, depresión, estrés postraumático y dificultades sociales, que trabaja con Terapia Cognitivo-Conductual (TCC), Terapia de Aceptación y Compromiso (ACT) y Terapia de Esquemas. Si Daniel pregunta, eres una IA que usa ese enfoque, no un profesional con cédula.
+Cualidades: alianza terapéutica sólida y confiable, comunicación empática, formulación de caso actualizada con lo que hay en las notas, planes consistentes, seguimiento del progreso, adaptación a Daniel, esperanza realista, sensibilidad cultural (es mexicano), autoconciencia y práctica basada en evidencia.
+Herramientas:
+- TCC: identificar pensamientos y predicciones automáticas, revisar evidencia a favor y en contra, construir un pensamiento más equilibrado, registrar situaciones.
+- ACT: disposición a sentir la incomodidad sin luchar con ella, defusión, aclarar valores (honestidad, conexión, compasión…) y actuar guiado por ellos más que por el miedo.
+- Esquemas: notar creencias tempranas que se repiten ("no debo molestar a otros", "no sé expresarme") y reencuadrarlas con autocompasión.
+- Exposición gradual: pasos pequeños y manejables, ensayos (role-play), enfocarse en presentarse honesto, claro y amable más que en lo "perfecto".
+Cómo respondes (en español mexicano, tuteando, breve y natural; no siempre usas todas las partes):
+1. Saludo cálido y reconocimiento de lo que contó.
+2. Reflejo empático de su situación o emoción.
+3. Observaciones desde tu enfoque, citando las notas del segundo cerebro de donde salen y presentándolas como hipótesis.
+4. Una o dos estrategias concretas de TCC, ACT o Esquemas que encajen.
+5. Una pregunta o paso de acción para seguir explorando.
+6. Cierre de apoyo en una frase.
+Colaboras: defines metas con Daniel, preguntas cómo le fue con lo acordado en notas anteriores y ajustas.`;
+
+const SAFETY = `
+Reglas fijas (no negociables):
+- No diagnosticas ni recetas medicamentos. No sustituyes a un profesional; si un tema lo amerita, sugieres terapia presencial o médico.
+- Si Daniel expresa ideas de hacerse daño, de no querer vivir, o peligro para él u otros: deja la exploración, responde con calidez y dale recursos en México: Línea de la Vida 800 911 2000 (24 h, gratuita) y 911 en emergencia. Invítalo a contactar a alguien de confianza ahora.
+- No guardes en el segundo cerebro detalles de autolesión, abuso o conductas de riesgo.
+- No inventes datos: si algo no está en las notas, dilo.`;
+
+const INTERVIEWER = `Eres el Entrevistador del segundo cerebro de Daniel (Dany): un amigo curioso y buen periodista. Conversas como persona, no como formulario.
+Objetivo: que Daniel cuente su vida y que lo importante quede guardado como notas interconectadas.
+Cómo conversas:
+- Respuestas breves, naturales, en español mexicano. Reaccionas a lo que cuenta antes de preguntar.
+- Una pregunta de seguimiento por turno: concreta (quién, cuándo, cómo se sintió, qué cambió, qué sigue).
+- Retomas temas abiertos de notas anteriores cuando encajan ("la otra vez mencionaste…").
+- No juzgas ni interpretas a fondo; eso es del terapeuta.
+Cuándo guardar (usa la herramienta guardar_nota):
+- Hechos durables, personas, decisiones, metas, eventos significativos, emociones intensas con su contexto, patrones que él mismo nombra.
+- No guardes charla trivial ni repitas notas que ya existen; si amplía una existente, usa el mismo título para actualizarla.
+- Escribe la nota en primera persona de Daniel, concisa, con fecha si la hay. En "enlaces" pon títulos de notas relacionadas (existentes o nuevas).
+- Nunca guardes números de identificación, cuentas o contraseñas.
+No anuncies cada guardado con mucho texto; basta seguir la conversación.`;
+
+const $ = s=>document.querySelector(s);
+const esc = s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+let db=null, sample=null, downloads=null;
+let NODES=[]; let INSIGHT=null; let THERAPIST_PROMPT=BASE_THERAPIST;
+let sel=null, filterArea=null, query="";
+const setStatus = t=>{$("#status").textContent=t};
+
+/* ---------- Tabs ---------- */
+document.querySelectorAll("nav.tabs button").forEach(b=>b.onclick=()=>show(b.dataset.v));
+function show(v){
+  document.querySelectorAll("nav.tabs button").forEach(b=>b.setAttribute("aria-selected",b.dataset.v===v));
+  document.querySelectorAll("section.view").forEach(s=>s.hidden = s.id!=="v-"+v);
+  if(v==="brain") requestAnimationFrame(resizeGraph);
+  if(v==="patterns") renderPatterns();
+}
+
+/* ---------- Data helpers ---------- */
+function linksOf(n){
+  const s=new Set((n.links||[]).map(x=>String(x).trim()).filter(Boolean));
+  for(const m of String(n.content||"").matchAll(/\[\[([^\]]+)\]\]/g)) s.add(m[1].trim());
+  return [...s];
+}
+const byTitle = t => NODES.find(n=>n.title.toLowerCase()===String(t).toLowerCase());
+function backlinks(n){ return NODES.filter(o=>o.id!==n.id && linksOf(o).some(t=>t.toLowerCase()===n.title.toLowerCase())); }
+const today = ()=>new Date().toISOString().slice(0,10);
+
+async function saveNode(data, id){
+  if(!db) throw new Error("Sin conexión a la base");
+  const now=new Date().toISOString();
+  const clean={
+    title:String(data.title||"Sin título").slice(0,120),
+    area:AMAP[data.area]?data.area:"mente",
+    content:String(data.content||""),
+    tags:(data.tags||[]).map(t=>String(t).replace(/^#/,"").trim().toLowerCase()).filter(Boolean).slice(0,12),
+    links:(data.links||[]).map(String).filter(Boolean).slice(0,20),
+    date:data.date||today(),
+    source:data.source||"manual",
+    updatedAt:now
+  };
+  const existing = id ? NODES.find(n=>n.id===id) : byTitle(clean.title);
+  if(existing){ await db.collection("nodes").doc(existing.id).update(clean); return existing.id; }
+  clean.createdAt=now;
+  const ref=await db.collection("nodes").add(clean); return ref.id;
+}
+
+/* ---------- Sidebar ---------- */
+function renderSide(){
+  const counts={}; NODES.forEach(n=>counts[n.area]=(counts[n.area]||0)+1);
+  $("#areas").innerHTML = `<button class="area-row" data-a="" aria-pressed="${!filterArea}"><span class="sw" style="background:var(--muted)"></span>Todas<span class="n">${NODES.length}</span></button>` +
+    AREAS.map(a=>`<button class="area-row" data-a="${a.id}" aria-pressed="${filterArea===a.id}"><span class="sw" style="background:${a.c}"></span>${a.name}<span class="n">${counts[a.id]||0}</span></button>`).join("");
+  $("#areas").querySelectorAll("button").forEach(b=>b.onclick=()=>{filterArea=b.dataset.a||null;renderSide();draw()});
+  const q=query.toLowerCase();
+  const list=NODES.filter(n=>(!filterArea||n.area===filterArea)&&(!q||(n.title+" "+n.content+" "+(n.tags||[]).join(" ")).toLowerCase().includes(q)))
+    .sort((a,b)=>String(b.updatedAt).localeCompare(String(a.updatedAt)));
+  $("#list").innerHTML = list.length? list.map(n=>`<button class="note-row" data-id="${n.id}" aria-current="${sel===n.id}" style="--c:${area(n.area).c}">${esc(n.title)}<small>${esc(area(n.area).name)} · ${esc(n.date||"")}</small></button>`).join("")
+    : `<div class="empty"><span>Sin notas aquí.</span></div>`;
+  $("#list").querySelectorAll(".note-row").forEach(b=>b.onclick=()=>select(b.dataset.id));
+}
+$("#q").oninput=e=>{query=e.target.value;renderSide()};
+$("#new").onclick=()=>{sel="__new";renderEditor();renderSide()};
+
+/* ---------- Editor ---------- */
+function select(id){sel=id;renderEditor();renderSide();draw()}
+let confirmDel=false;
+function renderEditor(){
+  const ed=$("#editor"); confirmDel=false;
+  if(!sel){
+    ed.innerHTML=`<div class="empty" style="flex:1"><div style="font-family:var(--f-display);font-size:20px">Tu mapa empieza aquí</div>
+      <p style="max-width:42ch;margin:0">Elige un punto del grafo, crea una nota con <b>+</b>, o cuéntale algo al <b>Entrevistador</b> y él irá guardando lo importante. En cualquier chat de Claude, la skill <b>segundo-cerebro</b> también escribe aquí.</p>
+      <button class="btn primary" id="go-int">Hablar con el Entrevistador</button></div>`;
+    $("#go-int").onclick=()=>show("interviewer"); return;
+  }
+  const n = sel==="__new" ? {title:"",area:filterArea||"mente",content:"",tags:[],links:[],date:today(),source:"manual"} : NODES.find(x=>x.id===sel);
+  if(!n){sel=null;return renderEditor()}
+  const a=area(n.area), bl = n.id?backlinks(n):[];
+  ed.innerHTML=`
+    <input class="title" id="e-title" placeholder="Título de la nota" value="${esc(n.title)}" aria-label="Título">
+    <div class="meta">
+      <span class="chip area"><span class="sw" style="background:${a.c}"></span><select id="e-area" class="field" style="border:0;padding:0;background:none">${AREAS.map(x=>`<option value="${x.id}" ${x.id===n.area?"selected":""}>${x.name}</option>`).join("")}</select></span>
+      <input type="date" id="e-date" class="field" value="${esc(n.date||"")}" aria-label="Fecha">
+      <span class="label">origen: ${esc(n.source||"manual")}</span>
+    </div>
+    <input class="field" id="e-tags" placeholder="etiquetas, separadas, por comas" value="${esc((n.tags||[]).join(", "))}" aria-label="Etiquetas">
+    <textarea class="field body" id="e-body" placeholder="Escribe. Usa [[Otra nota]] para enlazar." aria-label="Contenido">${esc(n.content)}</textarea>
+    <div><div class="label">Enlaces</div><div class="links" id="e-links">${linksOf(n).map(t=>`<button data-t="${esc(t)}">${esc(t)}${byTitle(t)?"":" ·nueva"}</button>`).join("")||'<span class="note">Ninguno todavía.</span>'}</div></div>
+    <div><div class="label">Lo mencionan</div><div class="links">${bl.map(o=>`<button data-id="${o.id}">${esc(o.title)}</button>`).join("")||'<span class="note">Ninguna nota apunta aquí.</span>'}</div></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn primary" id="e-save">Guardar</button>${n.id?'<button class="btn danger" id="e-del">Borrar</button>':""}<span class="label" id="e-msg" style="align-self:center"></span></div>`;
+  ed.querySelectorAll("#e-links button").forEach(b=>b.onclick=()=>{const t=byTitle(b.dataset.t); if(t) select(t.id)});
+  ed.querySelectorAll("button[data-id]").forEach(b=>b.onclick=()=>select(b.dataset.id));
+  $("#e-save").onclick=async()=>{
+    try{
+      const id=await saveNode({title:$("#e-title").value.trim()||"Sin título",area:$("#e-area").value,date:$("#e-date").value,
+        tags:$("#e-tags").value.split(","),content:$("#e-body").value,links:n.links||[],source:n.source||"manual"}, n.id);
+      sel=id; $("#e-msg").textContent="Guardado";
+    }catch(e){$("#e-msg").textContent="No se guardó: "+(e.message||e.code)}
+  };
+  const del=$("#e-del"); if(del) del.onclick=async()=>{
+    if(!confirmDel){confirmDel=true;del.textContent="¿Seguro? Borrar definitivamente";return}
+    await db.collection("nodes").doc(n.id).delete(); sel=null; renderEditor();
+  };
+}
+
+/* ---------- Graph ---------- */
+const cv=$("#graph"), ctx=cv.getContext("2d");
+let G={nodes:[],edges:[]}, view={x:0,y:0,k:1}, W=0,H=0, hover=null, drag=null, alpha=1;
+function css(v){return getComputedStyle(document.documentElement).getPropertyValue(v).trim()}
+function buildGraph(){
+  const old=Object.fromEntries(G.nodes.map(n=>[n.id,n]));
+  const used=new Set(NODES.map(n=>n.area));
+  const nodes=[], edges=[];
+  AREAS.filter(a=>used.has(a.id)).forEach((a,i,arr)=>{
+    const ang=i/arr.length*Math.PI*2, o=old["hub:"+a.id];
+    nodes.push(o||{id:"hub:"+a.id,hub:true,label:a.name,c:a.c,x:Math.cos(ang)*160,y:Math.sin(ang)*160,vx:0,vy:0});
+  });
+  NODES.forEach(n=>{
+    const o=old[n.id], h=nodes.find(x=>x.id==="hub:"+n.area);
+    const deg=linksOf(n).length+backlinks(n).length;
+    const node=o||{id:n.id,x:(h?.x||0)+(Math.random()-.5)*60,y:(h?.y||0)+(Math.random()-.5)*60,vx:0,vy:0};
+    Object.assign(node,{label:n.title,c:area(n.area).c,area:n.area,r:4+Math.min(6,deg*1.2)});
+    nodes.push(node); edges.push({a:node.id,b:"hub:"+n.area,hub:true});
+  });
+  NODES.forEach(n=>linksOf(n).forEach(t=>{const m=byTitle(t); if(m&&m.id!==n.id) edges.push({a:n.id,b:m.id})}));
+  const idx=Object.fromEntries(nodes.map(n=>[n.id,n]));
+  G={nodes,edges:edges.filter(e=>idx[e.a]&&idx[e.b]).map(e=>({...e,A:idx[e.a],B:idx[e.b]}))};
+  $("#gcount").textContent=`${NODES.length} notas · ${G.edges.filter(e=>!e.hub).length} enlaces`;
+  alpha=1;
+}
+function step(){
+  const N=G.nodes;
+  for(let i=0;i<N.length;i++){const a=N[i];
+    for(let j=i+1;j<N.length;j++){const b=N[j];let dx=b.x-a.x,dy=b.y-a.y,d2=dx*dx+dy*dy+.01;
+      if(d2>90000) continue; const f=(a.hub&&b.hub?2600:900)/d2*alpha, d=Math.sqrt(d2);
+      dx/=d;dy/=d; a.vx-=dx*f;a.vy-=dy*f;b.vx+=dx*f;b.vy+=dy*f;}}
+  for(const e of G.edges){const dx=e.B.x-e.A.x,dy=e.B.y-e.A.y,d=Math.sqrt(dx*dx+dy*dy)||1,L=e.hub?70:55,f=(d-L)*.02*alpha;
+    e.A.vx+=dx/d*f;e.A.vy+=dy/d*f;e.B.vx-=dx/d*f;e.B.vy-=dy/d*f;}
+  for(const n of N){ if(n===drag) continue; n.vx-=n.x*.002*alpha; n.vy-=n.y*.002*alpha; n.vx*=.82;n.vy*=.82; n.x+=n.vx;n.y+=n.vy; }
+  alpha=Math.max(.02,alpha*.995);
+}
+function resizeGraph(){const r=cv.getBoundingClientRect(),d=devicePixelRatio||1;W=r.width;H=r.height;cv.width=W*d;cv.height=H*d;ctx.setTransform(d,0,0,d,0,0)}
+const toScreen=(x,y)=>[W/2+(x+view.x)*view.k,H/2+(y+view.y)*view.k];
+const toWorld=(sx,sy)=>[(sx-W/2)/view.k-view.x,(sy-H/2)/view.k-view.y];
+function draw(){
+  if(!W) return;
+  ctx.clearRect(0,0,W,H);
+  const fg=css("--fg"),muted=css("--muted"),line=css("--line");
+  const focus=sel&&sel!=="__new"?sel:(hover?.id||null);
+  const near=new Set(); if(focus) G.edges.forEach(e=>{if(e.a===focus)near.add(e.b);if(e.b===focus)near.add(e.a)});
+  for(const e of G.edges){
+    const [x1,y1]=toScreen(e.A.x,e.A.y),[x2,y2]=toScreen(e.B.x,e.B.y);
+    const hot=focus&&(e.a===focus||e.b===focus);
+    const dim=filterArea&&!(e.A.area===filterArea||e.B.area===filterArea);
+    ctx.globalAlpha=dim?.15:hot?.95:(e.hub?.35:.6);
+    ctx.strokeStyle=hot?(G.nodes.find(n=>n.id===focus)?.c||fg):(e.hub?line:muted);
+    ctx.lineWidth=hot?1.6:1; ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+  }
+  for(const n of G.nodes){
+    const [x,y]=toScreen(n.x,n.y);
+    const dim=(filterArea&&n.area!==filterArea&&n.id!=="hub:"+filterArea)||(focus&&n.id!==focus&&!near.has(n.id)&&!n.hub);
+    ctx.globalAlpha=dim?.25:1;
+    const r=(n.hub?11:n.r)*Math.max(.7,Math.min(1.4,view.k));
+    ctx.beginPath();ctx.arc(x,y,r,0,7);ctx.fillStyle=n.c;ctx.fill();
+    if(n.hub){ctx.lineWidth=3;ctx.strokeStyle=css("--panel");ctx.stroke()}
+    if(n.id===focus){ctx.lineWidth=2;ctx.strokeStyle=fg;ctx.beginPath();ctx.arc(x,y,r+4,0,7);ctx.stroke()}
+    if(n.hub||n.id===focus||near.has(n.id)||n===hover||view.k>1.6){
+      ctx.font=(n.hub?"600 12px ":"12px ")+css("--f-body");ctx.fillStyle=n.hub?fg:muted;ctx.textAlign="center";
+      ctx.fillText(n.label.length>28?n.label.slice(0,27)+"…":n.label,x,y+r+14);
+    }
+  }
+  ctx.globalAlpha=1;
+}
+function loop(){ if(!$("#v-brain").hidden&&G.nodes.length){ if(alpha>.03||drag) step(); draw(); } requestAnimationFrame(loop) }
+function pick(sx,sy){const[wx,wy]=toWorld(sx,sy);let best=null,bd=1e9;for(const n of G.nodes){const d=Math.hypot(n.x-wx,n.y-wy);if(d<bd){bd=d;best=n}}return bd*view.k<16?best:null}
+let pan=null,moved=false;
+cv.addEventListener("pointerdown",e=>{const r=cv.getBoundingClientRect(),sx=e.clientX-r.left,sy=e.clientY-r.top;moved=false;
+  const n=pick(sx,sy); if(n){drag=n;alpha=Math.max(alpha,.3)} else pan={sx,sy,x:view.x,y:view.y}; cv.setPointerCapture(e.pointerId)});
+cv.addEventListener("pointermove",e=>{const r=cv.getBoundingClientRect(),sx=e.clientX-r.left,sy=e.clientY-r.top;
+  if(drag){const[wx,wy]=toWorld(sx,sy);drag.x=wx;drag.y=wy;drag.vx=drag.vy=0;moved=true}
+  else if(pan){view.x=pan.x+(sx-pan.sx)/view.k;view.y=pan.y+(sy-pan.sy)/view.k;moved=true}
+  else{const h=pick(sx,sy);if(h!==hover){hover=h;cv.style.cursor=h?"pointer":"grab";draw()}}});
+cv.addEventListener("pointerup",()=>{if(drag&&!moved){ if(drag.hub){filterArea=drag.id.slice(4);renderSide()} else select(drag.id)} drag=null;pan=null});
+cv.addEventListener("wheel",e=>{e.preventDefault();view.k=Math.max(.3,Math.min(3,view.k*(e.deltaY<0?1.1:.9)));draw()},{passive:false});
+$("#recenter").onclick=()=>{view={x:0,y:0,k:1};filterArea=null;renderSide();draw()};
+addEventListener("resize",()=>{resizeGraph();draw()});
+function renderLegend(){
+  const used=new Set(NODES.map(n=>n.area));
+  $("#legend").innerHTML=AREAS.filter(a=>used.has(a.id)).map(a=>`<span><i style="background:${a.c}"></i>${a.name}</span>`).join("");
+  $("#area-legend").innerHTML=AREAS.map(a=>`<span class="chip"><span class="sw" style="background:${a.c}"></span>${a.name}</span>`).join("");
+}
+
+/* ---------- Context for AI ---------- */
+function brainContext(limit=120){
+  const list=[...NODES].sort((a,b)=>String(b.updatedAt).localeCompare(String(a.updatedAt))).slice(0,limit);
+  if(!list.length) return "(El segundo cerebro está vacío todavía.)";
+  return list.map(n=>`### ${n.title}\nárea: ${area(n.area).name} | fecha: ${n.date||"?"} | etiquetas: ${(n.tags||[]).join(", ")||"-"} | enlaces: ${linksOf(n).join(", ")||"-"}\n${String(n.content).slice(0,700)}`).join("\n\n");
+}
+const saveTool = (mode,onSaved)=>({
+  name:"guardar_nota",
+  description:"Guarda o actualiza (mismo título) una nota en el segundo cerebro de Daniel. Úsala solo para información importante y durable.",
+  inputSchema:{type:"object",properties:{
+    title:{type:"string",description:"Título corto y específico"},
+    area:{type:"string",enum:AREAS.map(a=>a.id)},
+    content:{type:"string",description:"Nota concisa en primera persona de Daniel"},
+    tags:{type:"array",items:{type:"string"},description:"Emociones, personas o temas, minúsculas"},
+    links:{type:"array",items:{type:"string"},description:"Títulos de notas relacionadas"},
+    date:{type:"string",description:"YYYY-MM-DD del evento si se conoce"}
+  },required:["title","area","content"]},
+  async execute(input){ const id=await saveNode({...input,source:mode}); onSaved(input.title); return {ok:true,id}; }
+});
+
+/* ---------- Chat panes ---------- */
+function makeChat(rootSel, cfg){
+  const root=$(rootSel);
+  root.innerHTML=`<div class="chat">
+    <div class="panel chat-main">
+      <div class="chat-head"><h2>${cfg.title}</h2><button class="btn ghost" data-new style="margin-left:auto">Nueva sesión</button><p>${cfg.sub}</p></div>
+      <div class="msgs" aria-live="polite"></div>
+      <form class="composer"><textarea class="field" id="${cfg.id}-in" placeholder="${cfg.ph}" aria-label="Mensaje"></textarea><button class="btn primary">Enviar</button></form>
+    </div>
+    <aside class="panel chat-side"><div class="label">Guardado en esta sesión</div><ul data-saved><li class="note">Nada aún.</li></ul>
+      <div class="label" style="margin-top:8px">Sugerencias</div><div class="links" data-sugs>${cfg.sugs.map(s=>`<button type="button">${esc(s)}</button>`).join("")}</div>
+      <p class="note">${cfg.foot}</p></aside></div>`;
+  const msgs=root.querySelector(".msgs"), form=root.querySelector("form"), ta=root.querySelector("textarea"), savedUl=root.querySelector("[data-saved]");
+  let hist=[], saved=[], sessionId=null, busy=false;
+  const add=(role,text)=>{const d=document.createElement("div");d.className="msg "+role;d.textContent=text;msgs.appendChild(d);msgs.scrollTop=msgs.scrollHeight;return d};
+  const intro=()=>{msgs.innerHTML="";add("assistant",cfg.hello)};
+  intro();
+  const onSaved=t=>{saved.push(t);savedUl.innerHTML=saved.map(s=>`<li>${esc(s)}</li>`).join("");add("sys","✓ guardado en "+t)};
+  root.querySelector("[data-new]").onclick=()=>{hist=[];saved=[];sessionId=null;savedUl.innerHTML='<li class="note">Nada aún.</li>';intro()};
+  root.querySelectorAll("[data-sugs] button").forEach(b=>b.onclick=()=>{ta.value=b.textContent;ta.focus()});
+  ta.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();form.requestSubmit()}});
+  form.onsubmit=async e=>{
+    e.preventDefault(); const text=ta.value.trim(); if(!text||busy) return;
+    if(!sample){add("sys","La conexión con Claude no está disponible en esta vista.");return}
+    busy=true; ta.value=""; add("user",text); hist.push({role:"user",content:text});
+    const out=add("assistant","…");
+    const sys=cfg.system()+`\n\nFecha de hoy: ${today()}.\n\n=== SEGUNDO CEREBRO DE DANIEL ===\n${brainContext()}\n=== FIN ===\n\nConversación:`;
+    const input=hist.map((m,i)=>i===0?{role:"user",content:sys+"\n\nDaniel: "+m.content}:m);
+    try{
+      const r=await sample(input,{modelTier:"default",cache:false,tools:[saveTool(cfg.id,onSaved)],onText:u=>{out.textContent=u.text;msgs.scrollTop=msgs.scrollHeight}});
+      out.textContent=r.text||"(sin respuesta)"; hist.push({role:"assistant",content:r.text||""});
+      try{ if(db){ const doc={mode:cfg.id,messages:hist.slice(-60),saved,updatedAt:new Date().toISOString()};
+        if(sessionId) await db.collection("sessions").doc(sessionId).set(doc); else sessionId=(await db.collection("sessions").add(doc)).id; } }catch(_){}
+    }catch(err){ out.remove(); hist.pop(); add("sys", err.code==="rate_limited"?"Demasiadas solicitudes; espera un momento.":err.code==="not_granted"?"Necesitas permitir que la página consulte a Claude.":"No se pudo responder: "+(err.message||err.code)); }
+    busy=false;
+  };
+}
+
+/* ---------- Patterns ---------- */
+function renderPatterns(){
+  const counts={}; NODES.forEach(n=>counts[n.area]=(counts[n.area]||0)+1);
+  const max=Math.max(1,...Object.values(counts));
+  $("#p-areas").innerHTML=AREAS.filter(a=>counts[a.id]).sort((a,b)=>counts[b.id]-counts[a.id]).map(a=>`<div class="bar"><span>${a.name}</span><span class="track"><span class="fill" style="display:block;width:${counts[a.id]/max*100}%;background:${a.c}"></span></span><span class="v">${counts[a.id]}</span></div>`).join("")||'<p class="note">Aún no hay notas.</p>';
+  const tags={}; NODES.forEach(n=>(n.tags||[]).forEach(t=>tags[t]=(tags[t]||0)+1));
+  $("#p-tags").innerHTML=Object.entries(tags).sort((a,b)=>b[1]-a[1]).slice(0,24).map(([t,c])=>`<button type="button" data-t="${esc(t)}">#${esc(t)} <span style="color:var(--muted)">${c}</span></button>`).join("")||'<p class="note">Sin etiquetas todavía.</p>';
+  $("#p-tags").querySelectorAll("button").forEach(b=>b.onclick=()=>{query=b.dataset.t;$("#q").value=query;show("brain");renderSide()});
+  // weeks chart
+  const c=$("#p-weeks"),r=c.getBoundingClientRect(),d=devicePixelRatio||1,w=r.width,h=140; c.width=w*d;c.height=h*d;const g=c.getContext("2d");g.setTransform(d,0,0,d,0,0);
+  const weeks=Array(8).fill(0),now=Date.now();
+  NODES.forEach(n=>{const t=Date.parse(n.createdAt||n.date);if(!t)return;const k=Math.floor((now-t)/6048e5);if(k>=0&&k<8)weeks[7-k]++});
+  const m=Math.max(1,...weeks),bw=(w-20)/8;
+  g.font="11px "+css("--f-mono");g.textAlign="center";
+  weeks.forEach((v,i)=>{const bh=(h-34)*v/m,x=10+i*bw;g.fillStyle=css("--panel2");g.fillRect(x+4,10,bw-8,h-34);g.fillStyle=css("--accent");g.fillRect(x+4,10+(h-34-bh),bw-8,bh);g.fillStyle=css("--muted");g.fillText(i===7?"esta":(7-i)+"s",x+bw/2,h-8);if(v){g.fillStyle=css("--fg");g.fillText(v,x+bw/2,6+(h-34-bh))}});
+  renderInsight();
+}
+function renderInsight(){
+  const el=$("#p-insight");
+  if(!INSIGHT){el.innerHTML='<p class="note">Todavía no hay análisis. Cuando tengas unas 10 notas, pulsa “Analizar patrones”.</p>';$("#a-date").textContent="";return}
+  $("#a-date").textContent="último: "+String(INSIGHT.createdAt).slice(0,10);
+  const P=INSIGHT.patrones||[];
+  el.innerHTML=(INSIGHT.resumen?`<p style="max-width:75ch">${esc(INSIGHT.resumen)}</p>`:"")+
+    P.map(p=>`<div class="pattern"><h4><span class="chip" style="margin-right:6px"><span class="sw" style="background:${area(p.area).c}"></span>${esc(p.tipo||"patrón")}</span>${esc(p.titulo)}</h4>
+      <p>${esc(p.descripcion)}</p>
+      ${p.pregunta?`<p><b>Para explorar:</b> ${esc(p.pregunta)}</p>`:""}
+      ${p.sugerencia?`<p><b>Pequeño paso:</b> ${esc(p.sugerencia)}</p>`:""}
+      <div class="links">${(p.evidencia||[]).map(t=>`<button type="button" data-t="${esc(t)}">${esc(t)}</button>`).join("")}</div></div>`).join("")+
+    ((INSIGHT.fortalezas||[]).length?`<div class="pattern"><h4>Fortalezas que se repiten</h4><p>${(INSIGHT.fortalezas).map(esc).join(" · ")}</p></div>`:"")+
+    ((INSIGHT.huecos||[]).length?`<div class="pattern"><h4>Áreas con poca información</h4><p>${(INSIGHT.huecos).map(esc).join(" · ")}</p></div>`:"");
+  el.querySelectorAll("button[data-t]").forEach(b=>b.onclick=()=>{const n=byTitle(b.dataset.t);if(n){show("brain");select(n.id)}});
+}
+$("#analyze").onclick=async()=>{
+  const b=$("#analyze"); if(!sample){$("#p-insight").innerHTML='<p class="note">La conexión con Claude no está disponible.</p>';return}
+  if(NODES.length<3){$("#p-insight").innerHTML='<p class="note">Necesito al menos 3 notas para buscar patrones.</p>';return}
+  b.disabled=true;b.textContent="Analizando…";
+  try{
+    const res=await sample.json(`${THERAPIST_PROMPT}\n${SAFETY}\n\nTarea: analiza el segundo cerebro de Daniel y detecta patrones de conducta, emocionales, relacionales y de hábitos. Cada patrón debe apoyarse en al menos 2 notas (cita sus títulos exactos en "evidencia"). Formula hipótesis, no diagnósticos.\nResponde SOLO JSON con esta forma:\n{"resumen":"2-3 frases","patrones":[{"titulo":"","tipo":"conducta|emoción|relación|hábito|defensa|creencia","area":"${AREAS.map(a=>a.id).join("|")}","descripcion":"","evidencia":["título de nota"],"pregunta":"una pregunta para explorar","sugerencia":"un paso pequeño y concreto"}],"fortalezas":[""],"huecos":["áreas de vida con poca información"]}\nMáximo 6 patrones.\n\n=== NOTAS ===\n${brainContext(200)}`,{modelTier:"complex",cache:false});
+    const doc={...res,createdAt:new Date().toISOString(),nodeCount:NODES.length};
+    INSIGHT=doc; renderInsight(); try{await db.collection("insights").add(doc)}catch(_){}
+  }catch(e){$("#p-insight").innerHTML=`<p class="note">No se pudo analizar: ${esc(e.message||e.code)}</p>`}
+  b.disabled=false;b.textContent="Analizar patrones";
+};
+
+/* ---------- Settings & export ---------- */
+$("#tprompt").value=BASE_THERAPIST;
+$("#tsave").onclick=async()=>{try{THERAPIST_PROMPT=$("#tprompt").value.trim()||BASE_THERAPIST;await db.doc("config/therapist").set({prompt:THERAPIST_PROMPT,updatedAt:new Date().toISOString()});$("#tmsg").textContent="Guardado"}catch(e){$("#tmsg").textContent="No se guardó: "+(e.message||e.code)}};
+$("#treset").onclick=()=>{$("#tprompt").value=BASE_THERAPIST;$("#tmsg").textContent="Base restaurada; pulsa Guardar"};
+$("#export").onclick=async()=>{
+  const m=$("#emsg");
+  if(!downloads||!window.JSZip){m.textContent="Descarga no disponible en esta vista";return}
+  const zip=new JSZip(), safe=s=>String(s).replace(/[\\/:*?"<>|#^\[\]]/g,"-").slice(0,100);
+  NODES.forEach(n=>{
+    const fm=`---\narea: ${area(n.area).name}\nfecha: ${n.date||""}\ntags: [${(n.tags||[]).map(t=>JSON.stringify(t)).join(", ")}]\norigen: ${n.source||"manual"}\n---\n`;
+    const extra=(n.links||[]).filter(t=>!String(n.content).includes("[["+t+"]]")).map(t=>`[[${t}]]`).join(" ");
+    zip.file(`Segundo Cerebro/${area(n.area).name}/${safe(n.title)}.md`,`${fm}\n# ${n.title}\n\n${n.content}\n\n${extra?"Relacionado: "+extra+"\n":""}Área: [[${area(n.area).name}]]\n`);
+  });
+  AREAS.forEach(a=>zip.file(`Segundo Cerebro/${a.name}.md`,`# ${a.name}\n\nNodo central del área.\n`));
+  if(INSIGHT) zip.file(`Segundo Cerebro/Patrones ${String(INSIGHT.createdAt).slice(0,10)}.md`,`# Patrones\n\n${INSIGHT.resumen||""}\n\n`+(INSIGHT.patrones||[]).map(p=>`## ${p.titulo}\n${p.descripcion}\n\nEvidencia: ${(p.evidencia||[]).map(t=>"[["+t+"]]").join(", ")}\n`).join("\n"));
+  try{const blob=await zip.generateAsync({type:"blob"});await downloads.save({filename:`segundo-cerebro-${today()}.zip`,data:blob});m.textContent="Listo"}
+  catch(e){m.textContent=e.code==="declined"?"Descarga cancelada":"No se pudo: "+(e.message||e.code)}
+};
+
+/* ---------- Chats ---------- */
+makeChat("#v-interviewer",{id:"entrevistador",title:"Entrevistador",
+  sub:"Cuéntale lo que quieras. Pregunta, da seguimiento y guarda lo importante como notas enlazadas.",
+  ph:"¿Qué pasó hoy? (Enter envía, Shift+Enter salto de línea)",
+  hello:"¿Qué tal, Dany? Cuéntame algo de hoy o de lo que traigas en la cabeza. Yo pregunto y voy guardando lo que valga la pena.",
+  sugs:["Hoy en el trabajo pasó algo…","Quiero contarte de mi familia","Mis metas para este año","Algo que me está costando"],
+  foot:"Las notas aparecen en Cerebro al instante y puedes editarlas o borrarlas ahí.",
+  system:()=>INTERVIEWER+SAFETY});
+makeChat("#v-therapist",{id:"terapeuta",title:"Terapeuta",
+  sub:"Lee tu segundo cerebro para encontrar repeticiones y te acompaña a pensarlas. Es apoyo reflexivo, no reemplaza terapia profesional.",
+  ph:"¿De qué quieres hablar hoy?",
+  hello:"Hola, Daniel, soy el Dr. Rogers. Tengo a la mano lo que has ido guardando en tu segundo cerebro. ¿Qué te gustaría trabajar hoy?",
+  sugs:["¿Qué patrones ves en mí?","Me da ansiedad dar malas noticias","¿Por qué reacciono así cuando…?","Ayúdame a ensayar una conversación difícil"],
+  foot:"Si algo urgente pasa: Línea de la Vida 800 911 2000 (24 h) o 911.",
+  system:()=>THERAPIST_PROMPT+"\nPuedes guardar con guardar_nota (área mente) solo los insights que Daniel confirme como ciertos para él."+SAFETY});
+
+/* ---------- Boot ---------- */
+renderEditor(); renderLegend(); resizeGraph(); loop();
+(async()=>{
+  const timer=setTimeout(()=>{ if(!db) setStatus("Sin base de datos: abre la página iniciando sesión en claude.ai") },10000);
+  try{
+    const C=window.claude;
+    [db,sample,downloads]=await Promise.all([C?.use("db"),C?.use("sample"),C?.use("downloads")].map(p=>Promise.resolve(p).catch(()=>null)));
+  }catch(_){}
+  if(!db){ setStatus("Sin base de datos en esta vista"); return; }
+  clearTimeout(timer); setStatus("Sincronizado");
+  db.collection("nodes").onSnapshot(s=>{
+    NODES=s.docs.map(d=>({id:d.id,...d.data()})).filter(n=>n.title);
+    setStatus(`Sincronizado · ${NODES.length} notas`);
+    buildGraph(); renderSide(); renderLegend();
+    if(sel&&sel!=="__new"&&!NODES.find(n=>n.id===sel)) sel=null;
+    const ae=document.activeElement; if(!$("#editor").contains(ae)) renderEditor();
+    if(!$("#v-patterns").hidden) renderPatterns();
+  },e=>setStatus("Error de sincronización: "+e.code));
+  db.collection("insights").orderBy("createdAt","desc").limit(1).onSnapshot(s=>{INSIGHT=s.docs[0]?.data()||null; if(!$("#v-patterns").hidden) renderInsight()},()=>{});
+  try{const t=await db.doc("config/therapist").get(); if(t.exists&&t.data().prompt){THERAPIST_PROMPT=t.data().prompt;$("#tprompt").value=THERAPIST_PROMPT}}catch(_){}
+})();
+</script>
