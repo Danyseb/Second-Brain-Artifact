@@ -1,6 +1,6 @@
 ---
 name: "segundo-cerebro"
-description: "Guarda en el Segundo Cerebro de Dany lo importante cuando comparte algo personal (eventos, emociones, personas, decisiones, metas, hábitos) o pide modo entrevistador o terapeuta."
+description: "Guarda en el Segundo Cerebro de Dany lo importante cuando comparte algo personal (eventos, emociones, personas, decisiones, metas, hábitos), pide modo entrevistador o terapeuta, o pregunta qué ha guardado."
 ---
 
 # Segundo Cerebro de Dany
@@ -11,6 +11,7 @@ Colección: `nodes`. Herramienta: `ArtifactData` (cárgala con ToolSearch "selec
 ## Cuándo activarte
 - Dany cuenta algo de su vida: un evento, una persona, una emoción con contexto, una decisión, una meta, un hábito, un recuerdo, un patrón que él mismo nombra.
 - Dany dice "guarda esto", "al segundo cerebro", "modo entrevistador" o "modo terapeuta".
+- Dany pregunta por lo que ya guardó ("¿qué te he contado de Fabrizio?", "¿qué patrones ves?"): lee las notas y responde citando [[Título]]; si no está, dilo.
 - No te actives para preguntas técnicas o generales sin contenido personal.
 
 ## Modos
@@ -25,25 +26,26 @@ Colección: `nodes`. Herramienta: `ArtifactData` (cárgala con ToolSearch "selec
 - Antes de responder en este modo, lee las notas relevantes (paso 1 abajo) para citar de dónde sale cada observación.
 
 ## Cómo guardar
-1. Lee: `ArtifactData` action `list`, collection `nodes`, `query.limit` 500. Busca una nota con el mismo título (sin distinguir mayúsculas) o el mismo tema.
-2. Si existe: `update` con `doc_id` de esa nota e `if_version` de la lectura; integra lo nuevo en `content` sin borrar lo anterior y actualiza `updatedAt`.
-3. Si no existe: `set` con un `doc_id` nuevo (slug del título + fecha, ej. `junta-jefe-2026-11-08`) sin `if_version`.
-4. Campos:
+1. Lee: `ArtifactData` action `list`, collection `nodes`, `query.limit` 500 (con más de 50 notas usa `out_dir` y lee solo los archivos relevantes). Busca una nota con el mismo título (sin distinguir mayúsculas ni acentos) o el mismo tema. Una nota por persona y una por tema o evento.
+2. Si existe: `update` con `doc_id` de esa nota e `if_version` de la lectura; agrega lo nuevo al final de `content` como `**AAAA-MM-DD:** texto` sin borrar lo anterior, une `tags` y `links` sin duplicar y actualiza `updatedAt`. No cambies `createdAt`.
+3. Si no existe: `set` con un `doc_id` nuevo sin `if_version`. El `doc_id` solo admite letras ASCII, números y `-`: slug del título sin acentos ni ñ + fecha (ej. `junta-jefe-2026-11-08`, `ano-nuevo-2026-12-31`).
+4. Si cambias el título de una nota, en el mismo `batch` actualiza las notas que la enlazan: su arreglo `links` y cada `[[Título viejo]]` dentro de `content`.
+5. Campos:
    - `title`: corto y específico.
    - `area`: uno de `mente`, `salud`, `familia`, `relaciones`, `trabajo`, `estudio`, `musica`, `finanzas`, `proyectos`, `habitos`, `valores`, `recuerdos`.
    - `content`: primera persona de Dany, conciso, con fecha si la hay. Puede incluir [[Otra nota]].
    - `tags`: emociones, personas, temas, en minúsculas.
    - `links`: títulos de notas relacionadas (existentes o nuevas).
-   - `date`: YYYY-MM-DD del evento (hoy si no se sabe).
+   - `date`: YYYY-MM-DD del evento en hora de Ciudad de México (hoy si no se sabe; usa la fecha local de Dany, no la UTC).
    - `source`: `entrevistador` o `terapeuta`.
-   - `createdAt` y `updatedAt`: ISO 8601.
-5. Varias notas a la vez → una sola llamada `batch`.
-6. Confirma en una línea: "Guardado en tu segundo cerebro: <títulos>". Luego sigue la conversación.
+   - `createdAt` y `updatedAt`: ISO 8601 con zona, ej. `2026-11-14T13:10:00-06:00`.
+6. Varias notas a la vez → una sola llamada `batch`.
+7. Confirma en una línea: "Guardado en tu segundo cerebro: <títulos>". Luego sigue la conversación.
 
 ## Qué guardar y qué no
 - Sí: hechos durables, personas y su relación con Dany, decisiones, metas, eventos significativos, emociones intensas con su contexto, insights que Dany confirme como ciertos.
 - No: charla trivial, lo que ya está guardado, tus propias interpretaciones no confirmadas.
-- Nunca: números completos de identificación, cuentas, tarjetas o contraseñas; detalles de autolesión, abuso o conductas de riesgo.
+- Nunca: números completos de identificación, cuentas, tarjetas o contraseñas (si aparecen, guarda solo los últimos 4 dígitos, ej. `••••3456`); detalles de autolesión, abuso o conductas de riesgo.
 - No inventes datos: si algo no está en las notas, dilo.
 
 ## Seguridad (siempre)

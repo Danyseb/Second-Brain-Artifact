@@ -12,6 +12,15 @@ Mapa cognitivo personal de Dany: notas por área de vida conectadas en un grafo,
 | `index.html` | Código del artefacto (HTML autocontenido) |
 | `skill/segundo-cerebro/SKILL.md` | Skill de Claude que alimenta el artefacto |
 
+## Funciones (v2)
+
+- **Cerebro:** grafo por áreas (local, zoom con rueda o pellizco, encuadre automático), notas con formato y [[enlaces]] clicables, autoguardado, renombrar actualiza enlaces, deshacer al borrar.
+- **+ Captura (Ctrl K):** texto suelto a la nota del día o repartido en notas por la IA, con vista previa.
+- **Entrevistador y Terapeuta (Dr. Rogers):** buscan y leen notas completas, amplían notas sin borrar lo anterior, sesiones retomables, botón Detener y aviso de crisis.
+- **Patrones:** resumen, peso por área, notas por semana, etiquetas, notas sin conectar, línea de tiempo e historial de análisis.
+- **Ajustes:** meta-prompt, respaldo .json, vault de Obsidian .zip, importación (.json, .zip, .md), estado de conexión y atajos.
+- Oculta números de tarjeta, cuenta o CURP y contraseñas, y guarda solo los últimos 4 dígitos. Fechas en hora de Ciudad de México.
+
 ## Cómo funciona
 
 El artefacto corre dentro de claude.ai y usa tres capacidades:
