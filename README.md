@@ -20,6 +20,7 @@ Mapa cognitivo personal de Dany: notas por área de vida conectadas en un grafo,
 - **Patrones:** resumen, peso por área, notas por semana, etiquetas, notas sin conectar, línea de tiempo e historial de análisis.
 - **Ajustes:** meta-prompt, respaldo .json, vault de Obsidian .zip, importación (.json, .zip, .md), estado de conexión y atajos.
 - Oculta números de tarjeta, cuenta o CURP y contraseñas, y guarda solo los últimos 4 dígitos. Fechas en hora de Ciudad de México.
+- **Diseño (v2.2):** acento verde azulado, IBM Plex Sans y Serif, escala fija de tipografía y espaciado, modo claro y oscuro, y 12 colores de área con la misma luminosidad y saturación (contraste de 3:1 o más en ambos fondos).
 
 ## Cómo funciona
 
